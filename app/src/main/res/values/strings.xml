@@ -18,4 +18,6 @@
     <string name="registrants">Registrants:</string>
     <string name="event_description">Event Description</string>
     <string name="register_now">Register Now</string>
+    <string name="sisa_quota">Sisa Quota</string>
+    <string name="penyelenggara">Event Owner</string>
 </resources>

@@ -70,7 +70,7 @@ class DetailEventFragment : Fragment() {
         }
 
         viewModel.snackbarText.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let{snackbarText->
+            it.getContentIfNotHandled()?.let { snackbarText ->
                 Snackbar.make(requireView(), snackbarText, Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -88,6 +88,7 @@ class DetailEventFragment : Fragment() {
             includeEventDetail.tvLocation.text = event?.cityName
             includeEventDetail.tvRegistrants.text = event?.registrants.toString()
             includeEventDetail.tvQuota.text = event?.quota.toString()
+            includeEventDetail.tvPenyelenggara.text = event?.ownerName.toString()
             tvDescription.text =
                 HtmlCompat.fromHtml(event?.description.toString(), HtmlCompat.FROM_HTML_MODE_LEGACY)
             btnRegister.setOnClickListener {
