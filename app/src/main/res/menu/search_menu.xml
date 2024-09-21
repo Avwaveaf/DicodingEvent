@@ -5,7 +5,6 @@
     <group android:menuCategory="container">
 
     <item
-        android:id="@+id/menu1"
         android:icon="@drawable/baseline_clear_24"
         android:title="@string/clear"
         app:showAsAction="always" />

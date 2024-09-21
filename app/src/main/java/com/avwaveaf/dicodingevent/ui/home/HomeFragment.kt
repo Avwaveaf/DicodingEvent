@@ -6,11 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.avwaveaf.dicodingevent.data.response.EventItem
+import com.avwaveaf.dicodingevent.data.local.entity.Event // Update this import
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
 import com.avwaveaf.dicodingevent.databinding.FragmentHomeBinding
+import com.avwaveaf.dicodingevent.di.Injection
 import com.avwaveaf.dicodingevent.ui.EventAdapter
+import com.avwaveaf.dicodingevent.ui.factory.ViewModelFactory
 import com.google.android.material.carousel.CarouselLayoutManager
 import com.google.android.material.snackbar.Snackbar
 
@@ -18,7 +20,9 @@ class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-    private val homeViewModel: HomeViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by viewModels {
+        ViewModelFactory(Injection.provideRepository(requireContext()))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,8 +37,12 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         setupObservers()
-    }
 
+        // Set up SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            homeViewModel.refreshEvents() // Trigger the refresh method in ViewModel
+        }
+    }
 
     private fun setupRecyclerView() {
         with(binding) {
@@ -44,63 +52,61 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        homeViewModel.activeEvents.observe(viewLifecycleOwner) {
-            setEventsData(
-                it,
-                binding.rvActiveEvents,
-                true
-            )
+        // Observing Active Events from the repository via ViewModel
+        homeViewModel.activeEvents.observe(viewLifecycleOwner) { activeEvents ->
+            setEventsData(activeEvents, binding.rvActiveEvents, true)
         }
-        homeViewModel.finishedEvents.observe(viewLifecycleOwner) {
-            setEventsData(
-                it,
-                binding.rvFinishedEvents,
-                false
-            )
+
+        // Observing Finished Events from the repository via ViewModel
+        homeViewModel.finishedEvents.observe(viewLifecycleOwner) { finishedEvents ->
+            setEventsData(finishedEvents, binding.rvFinishedEvents, false)
         }
-        homeViewModel.isLoadingActiveEvent.observe(viewLifecycleOwner) {
-            updateLoading(
-                it,
-                binding.pbActive
-            )
-        }
-        homeViewModel.isLoadingFinishedEvent.observe(viewLifecycleOwner) {
-            updateLoading(
-                it,
-                binding.pbFinished
-            )
-        }
+
+        // Observing Snackbar messages
         homeViewModel.snackbarText.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let{snackbarText->
+            it.getContentIfNotHandled()?.let { snackbarText ->
                 Snackbar.make(requireView(), snackbarText, Snackbar.LENGTH_SHORT).show()
             }
+        }
+
+        // Observing loading state
+        homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            updateLoading(isLoading)
         }
     }
 
     private fun setEventsData(
-        events: List<EventItem>?,
+        events: List<Event>?, // Changed from EventItem to Event
         recyclerView: androidx.recyclerview.widget.RecyclerView,
         isActiveEvent: Boolean
     ) {
-        val topEvents = events?.take(5)
-        val adapter = EventAdapter(onItemClick = { event ->
-            navigateToDetailScreen(event)
-        }, useLayoutA = isActiveEvent)
-        adapter.submitList(topEvents)
+        // Map the list of Event entities to a list of EventItem objects
+        val topEventItems = events?.map { it.eventItem }?.take(5) // Extract EventItems and take top 5
+
+        // Create the adapter, passing in the list of EventItems
+        val adapter = EventAdapter(
+            onItemClick = { eventItem -> navigateToDetailScreen(eventItem) },
+            useLayoutA = isActiveEvent
+        )
+
+        // Submit the list of EventItems to the adapter
+        adapter.submitList(topEventItems)
         recyclerView.adapter = adapter
     }
 
     private fun navigateToDetailScreen(event: EventItem) {
-        val action =
-            HomeFragmentDirections.actionNavigationHomeToDetailEventFragment()
+        val action = HomeFragmentDirections.actionNavigationHomeToDetailEventFragment()
         action.eventId = event.id.toString()
         view?.let {
-            Navigation.findNavController(requireView()).navigate(action)
+            androidx.navigation.Navigation.findNavController(it).navigate(action)
         }
     }
 
-    private fun updateLoading(isLoading: Boolean, progressBar: android.widget.ProgressBar) {
-        progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+    private fun updateLoading(isLoading: Boolean) {
+        // Assuming you have two ProgressBars: one for active and one for finished events
+        binding.pbActive.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.pbFinished.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.swipeRefreshLayout.isRefreshing = isLoading // Update SwipeRefreshLayout
     }
 
     override fun onDestroyView() {

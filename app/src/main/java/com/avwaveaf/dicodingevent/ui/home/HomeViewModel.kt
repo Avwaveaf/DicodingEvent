@@ -1,76 +1,57 @@
 package com.avwaveaf.dicodingevent.ui.home
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.avwaveaf.dicodingevent.data.response.EventItem
-import com.avwaveaf.dicodingevent.data.response.EventResponse
-import com.avwaveaf.dicodingevent.data.retrofit.ApiConfig
+import androidx.lifecycle.viewModelScope
+import com.avwaveaf.dicodingevent.data.EventRepository
+import com.avwaveaf.dicodingevent.data.local.entity.Event
 import com.avwaveaf.dicodingevent.util.EventWrapper
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import kotlinx.coroutines.launch
 
-class HomeViewModel : ViewModel() {
-    private val _activeEvents = MutableLiveData<List<EventItem>>()
-    val activeEvents: LiveData<List<EventItem>> = _activeEvents
-
-    private val _finishedEvents = MutableLiveData<List<EventItem>>()
-    val finishedEvents: LiveData<List<EventItem>> = _finishedEvents
-
-    private val _isLoadingActiveEvent = MutableLiveData<Boolean>()
-    val isLoadingActiveEvent: LiveData<Boolean> = _isLoadingActiveEvent
-
-    private val _isLoadingFinishedEvent = MutableLiveData<Boolean>()
-    val isLoadingFinishedEvent: LiveData<Boolean> = _isLoadingFinishedEvent
-
+class HomeViewModel(private val repository: EventRepository) : ViewModel() {
     private val _snackbarText = MutableLiveData<EventWrapper<String>>()
     val snackbarText: LiveData<EventWrapper<String>> = _snackbarText
 
+    // LiveData from the repository for active and finished events
+    val activeEvents: LiveData<List<Event>> = repository.getActiveEvents()
+    val finishedEvents: LiveData<List<Event>> = repository.getFinishedEvents()
+
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
+
     init {
-        fetchEvents(true)
-        fetchEvents(false)
+        refreshEventsIfNeeded()
     }
 
-    private fun fetchEvents(isActive: Boolean) {
-        val loadingLiveData = if (isActive) _isLoadingActiveEvent else _isLoadingFinishedEvent
-        val eventsLiveData = if (isActive) _activeEvents else _finishedEvents
+    // Refresh events from the repository
+    fun refreshEvents() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                repository.refreshEvents()
+            } catch (e: Exception) {
 
-        loadingLiveData.value = true
-        val client = if (isActive) {
-            ApiConfig.getApiService().getActiveEvents(active = 1)
-        } else {
-            ApiConfig.getApiService().getFinishedEvents(active = 0)
+                _snackbarText.value = EventWrapper("Failed to refresh events: ${e.message}")
+            }
+            _isLoading.value = false
         }
-
-        client.enqueue(object : Callback<EventResponse> {
-            override fun onResponse(call: Call<EventResponse>, response: Response<EventResponse>) {
-                loadingLiveData.value = false
-                if (response.isSuccessful && response.body() != null) {
-                    eventsLiveData.value = response.body()?.listEvents
-                } else {
-                    Log.e(TAG, "onFailure: ${response.message()}")
-                    if (response.body()?.message?.trim() == "Unable to resolve host \"event-api.dicoding.dev\": No address associated with hostname") {
-                        _snackbarText.value = EventWrapper("No Internet Connection")
-                    } else {
-                        _snackbarText.value = EventWrapper(response.body()?.message.toString())
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<EventResponse>, t: Throwable) {
-                loadingLiveData.value = false
-                Log.e(TAG, "onFailure: ${t.message.toString()}")
-                if (t.message?.trim() == "Unable to resolve host \"event-api.dicoding.dev\": No address associated with hostname") {
-                    _snackbarText.value = EventWrapper("No Internet Connection")
-                } else {
-                    _snackbarText.value = EventWrapper(t.message.toString())
-                }
-            }
-        })
     }
 
+    private fun refreshEventsIfNeeded() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // Check if we should fetch data from the network
+                if (repository.shouldFetchFromNetwork()) {
+                    repository.refreshEvents()
+                }
+            } catch (e: Exception) {
+                _snackbarText.value = EventWrapper("Failed to refresh events: ${e.message}")
+            }
+            _isLoading.value = false
+        }
+    }
 
     companion object {
         private const val TAG = "HomeViewModel"

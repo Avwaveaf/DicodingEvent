@@ -4,15 +4,18 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.avwaveaf.dicodingevent.data.response.EventDetailResponse
-import com.avwaveaf.dicodingevent.data.response.EventItem
-import com.avwaveaf.dicodingevent.data.retrofit.ApiConfig
+import androidx.lifecycle.viewModelScope
+import com.avwaveaf.dicodingevent.data.EventRepository
+import com.avwaveaf.dicodingevent.data.remote.response.EventDetailResponse
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
+import com.avwaveaf.dicodingevent.data.remote.retrofit.ApiConfig
 import com.avwaveaf.dicodingevent.util.EventWrapper
+import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class DetailEventViewModel : ViewModel() {
+class DetailEventViewModel(private val repository: EventRepository) : ViewModel() {
     private val _detailEvent = MutableLiveData<EventItem>()
     val detailEvent: LiveData<EventItem> = _detailEvent
 
@@ -24,6 +27,25 @@ class DetailEventViewModel : ViewModel() {
 
     companion object{
         const val TAG = "detailEventViewModel"
+    }
+
+    private val _isFavorite = MutableLiveData<Boolean>()
+    val isFavorite: LiveData<Boolean> = _isFavorite
+
+    fun toggleFavorite(eventId: String) {
+        Log.d(TAG, eventId)
+        viewModelScope.launch {
+            repository.toggleFavorite(eventId)
+            _isFavorite.value = repository.isEventFavorite(eventId)
+            Log.d(TAG, _isFavorite.value.toString())
+        }
+    }
+
+    fun checkFavoriteStatus(eventId: String) {
+        viewModelScope.launch {
+            _isFavorite.value = repository.isEventFavorite(eventId)
+            Log.d(TAG, _isFavorite.value.toString())
+        }
     }
 
     fun fetchDetail(eventId: String) {
@@ -56,4 +78,6 @@ class DetailEventViewModel : ViewModel() {
 
         })
     }
+
+
 }

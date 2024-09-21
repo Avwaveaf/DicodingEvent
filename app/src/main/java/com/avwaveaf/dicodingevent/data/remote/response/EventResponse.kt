@@ -1,6 +1,8 @@
-package com.avwaveaf.dicodingevent.data.response
+package com.avwaveaf.dicodingevent.data.remote.response
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
 data class EventResponse(
 
@@ -25,6 +27,7 @@ data class EventDetailResponse(
     val event: EventItem = EventItem()
 )
 
+@Parcelize
 data class EventItem(
 
     @field:SerializedName("summary")
@@ -68,4 +71,4 @@ data class EventItem(
 
     @field:SerializedName("category")
     val category: String? = null
-)
+): Parcelable

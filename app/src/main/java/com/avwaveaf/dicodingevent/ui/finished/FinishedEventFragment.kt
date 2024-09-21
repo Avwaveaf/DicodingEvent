@@ -1,7 +1,6 @@
 package com.avwaveaf.dicodingevent.ui.finished
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,9 +9,12 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.avwaveaf.dicodingevent.R
-import com.avwaveaf.dicodingevent.data.response.EventItem
+import com.avwaveaf.dicodingevent.data.local.entity.Event
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
 import com.avwaveaf.dicodingevent.databinding.FragmentFinishedEventBinding
+import com.avwaveaf.dicodingevent.di.Injection
 import com.avwaveaf.dicodingevent.ui.EventAdapter
+import com.avwaveaf.dicodingevent.ui.factory.ViewModelFactory
 import com.avwaveaf.dicodingevent.ui.home.HomeViewModel
 import com.google.android.material.snackbar.Snackbar
 
@@ -21,8 +23,12 @@ class FinishedEventFragment : Fragment() {
     private var _binding: FragmentFinishedEventBinding? = null
     private val binding get() = _binding!!
 
-    private val finishedEventViewModel: FinishedEventViewModel by viewModels()
-    private val homeViewModel: HomeViewModel by viewModels()
+    private val finishedEventViewModel: FinishedEventViewModel by viewModels{
+        ViewModelFactory(Injection.provideRepository(requireContext()))
+    }
+    private val homeViewModel: HomeViewModel by viewModels{
+        ViewModelFactory(Injection.provideRepository(requireContext()))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -41,28 +47,34 @@ class FinishedEventFragment : Fragment() {
         setupObserver()
 
         setupRecyclerView()
+
+        // Set up SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            homeViewModel.refreshEvents() // Trigger the refresh method in ViewModel
+        }
     }
+
 
     private fun setupObserver() {
         finishedEventViewModel.isLoading.observe(viewLifecycleOwner) {
             updateLoading(it, binding.pbFinished)
         }
-        finishedEventViewModel.searchedEvents.observe(viewLifecycleOwner) {
-            setEventsData(it, binding.rvFinishedEvents)
+        finishedEventViewModel.searchedEvents.observe(viewLifecycleOwner) { events ->
+            setEventsData(events.map { Event(eventItem = it) }, binding.rvFinishedEvents)
         }
         homeViewModel.finishedEvents.observe(viewLifecycleOwner) {
             setEventsData(it, binding.rvFinishedEvents)
         }
-        homeViewModel.isLoadingFinishedEvent.observe(viewLifecycleOwner){
+        homeViewModel.isLoading.observe(viewLifecycleOwner) {
             updateLoading(it, binding.pbFinished)
         }
         homeViewModel.snackbarText.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let{snackbarText->
+            it.getContentIfNotHandled()?.let { snackbarText ->
                 Snackbar.make(requireView(), snackbarText, Snackbar.LENGTH_SHORT).show()
             }
         }
         finishedEventViewModel.snackbarText.observe(viewLifecycleOwner) {
-            it.getContentIfNotHandled()?.let{snackbarText->
+            it.getContentIfNotHandled()?.let { snackbarText ->
                 Snackbar.make(requireView(), snackbarText, Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -70,6 +82,7 @@ class FinishedEventFragment : Fragment() {
 
     private fun updateLoading(isLoading: Boolean, progressBar: android.widget.ProgressBar) {
         progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.swipeRefreshLayout.isRefreshing = isLoading // Update SwipeRefreshLayout
     }
 
     private fun setupRecyclerView() {
@@ -80,20 +93,22 @@ class FinishedEventFragment : Fragment() {
 
 
     private fun setEventsData(
-        events: List<EventItem>?,
+        events: List<Event>?,
         recyclerView: androidx.recyclerview.widget.RecyclerView,
     ) {
         val adapter = EventAdapter(onItemClick = { event ->
             navigateToDetailScreen(event)
         }, useLayoutA = false)
-        adapter.submitList(events)
+        val finishedEvents = events?.map { it.eventItem }
+        adapter.submitList(finishedEvents)
         recyclerView.adapter = adapter
     }
 
     private fun navigateToDetailScreen(event: EventItem) {
-        val action = FinishedEventFragmentDirections.actionNavigationFinishedEventToDetailEventFragment()
+        val action =
+            FinishedEventFragmentDirections.actionNavigationFinishedEventToDetailEventFragment()
         action.eventId = event.id.toString()
-        view?.let{
+        view?.let {
             Navigation.findNavController(requireView()).navigate(action)
         }
     }
@@ -106,7 +121,10 @@ class FinishedEventFragment : Fragment() {
                 if (searchBar.text.isNotEmpty()) {
                     searchBar.inflateMenu(R.menu.search_menu)
                     searchBar.setOnMenuItemClickListener { _ ->
-                        finishedEventViewModel.searchEvents("")
+                        // return the list to before
+                        homeViewModel.finishedEvents.observe(viewLifecycleOwner) {
+                            setEventsData(it, binding.rvFinishedEvents)
+                        }
                         searchBar.setText("")
                         searchBar.menu.clear()
                         true

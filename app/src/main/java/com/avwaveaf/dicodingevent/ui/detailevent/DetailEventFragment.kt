@@ -14,8 +14,11 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
-import com.avwaveaf.dicodingevent.data.response.EventItem
+import com.avwaveaf.dicodingevent.R
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
 import com.avwaveaf.dicodingevent.databinding.FragmentDetailEventBinding
+import com.avwaveaf.dicodingevent.di.Injection
+import com.avwaveaf.dicodingevent.ui.factory.ViewModelFactory
 import com.bumptech.glide.Glide
 import com.google.android.material.snackbar.Snackbar
 
@@ -23,7 +26,9 @@ class DetailEventFragment : Fragment() {
     private var _binding: FragmentDetailEventBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel: DetailEventViewModel by viewModels()
+    private val viewModel: DetailEventViewModel by viewModels{
+        ViewModelFactory(Injection.provideRepository(requireContext()))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -58,6 +63,16 @@ class DetailEventFragment : Fragment() {
         }
         viewModel.fetchDetail(eventId.toString())
         setupObserver()
+
+        setupFabFavorite()
+    }
+
+    private fun setupFabFavorite() {
+        binding.fab.setOnClickListener {
+            viewModel.toggleFavorite(arguments?.let {
+                DetailEventFragmentArgs.fromBundle(it).eventId
+            } ?: "")
+        }
     }
 
     private fun setupObserver() {
@@ -74,6 +89,22 @@ class DetailEventFragment : Fragment() {
                 Snackbar.make(requireView(), snackbarText, Snackbar.LENGTH_SHORT).show()
             }
         }
+
+        viewModel.isFavorite.observe(viewLifecycleOwner) { isFavorite ->
+            updateFabIcon(isFavorite)
+        }
+
+        // Check favorite status when the fragment is created
+        viewModel.checkFavoriteStatus(arguments?.let {
+            DetailEventFragmentArgs.fromBundle(it).eventId
+        } ?: "")
+    }
+
+    private fun updateFabIcon(isFavorite: Boolean) {
+        binding.fab.setImageResource(
+            if (isFavorite) R.drawable.baseline_favorite_24
+            else R.drawable.baseline_favorite_border_24
+        )
     }
 
     private fun updateUI(event: EventItem?) {

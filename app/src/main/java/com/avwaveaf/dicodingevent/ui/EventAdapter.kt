@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.avwaveaf.dicodingevent.data.response.EventItem
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
 import com.avwaveaf.dicodingevent.databinding.ItemEventBinding
 import com.avwaveaf.dicodingevent.databinding.ItemEventFinishedBinding
 import com.bumptech.glide.Glide

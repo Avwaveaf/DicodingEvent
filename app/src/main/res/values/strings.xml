@@ -20,4 +20,17 @@
     <string name="register_now">Register Now</string>
     <string name="sisa_quota">Sisa Quota</string>
     <string name="penyelenggara">Event Owner</string>
+
+
+    <string name="no_favorite_events">You don\'t have any favorite events yet.</string>
+    <string name="favorite">Favorite</string>
+    <string name="favorite_event">Favorite Event</string>
+    <string name="display_appearance">Display Appearance</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="toggle_between_dark_and_light_theme">Toggle between dark and light theme</string>
+    <string name="settings">Settings</string>
+    <string name="notification_setting">Notification Setting</string>
+    <string name="receive_daily_reminders_for_upcoming_events">Receive daily reminders for upcoming events.</string>
+    <string name="enable_daily_reminder">Enable Daily Reminder</string>
+    <string name="add_to_favorite_button">Add to favorite button</string>
 </resources>

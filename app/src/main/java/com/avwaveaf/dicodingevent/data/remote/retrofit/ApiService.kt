@@ -1,7 +1,7 @@
-package com.avwaveaf.dicodingevent.data.retrofit
+package com.avwaveaf.dicodingevent.data.remote.retrofit
 
-import com.avwaveaf.dicodingevent.data.response.EventDetailResponse
-import com.avwaveaf.dicodingevent.data.response.EventResponse
+import com.avwaveaf.dicodingevent.data.remote.response.EventDetailResponse
+import com.avwaveaf.dicodingevent.data.remote.response.EventResponse
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -28,4 +28,7 @@ interface ApiService {
     fun getDetailEvent(
         @Path("id") id: String,
     ): Call<EventDetailResponse>
+
+    @GET("events?active=-1&limit=1")
+    fun getEventNotification(): Call<EventResponse>
 }

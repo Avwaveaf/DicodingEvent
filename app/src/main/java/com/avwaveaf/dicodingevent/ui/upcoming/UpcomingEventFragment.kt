@@ -8,9 +8,12 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.avwaveaf.dicodingevent.data.response.EventItem
+import com.avwaveaf.dicodingevent.data.local.entity.Event
+import com.avwaveaf.dicodingevent.data.remote.response.EventItem
 import com.avwaveaf.dicodingevent.databinding.FragmentUpcomingEventBinding
+import com.avwaveaf.dicodingevent.di.Injection
 import com.avwaveaf.dicodingevent.ui.EventAdapter
+import com.avwaveaf.dicodingevent.ui.factory.ViewModelFactory
 import com.avwaveaf.dicodingevent.ui.home.HomeViewModel
 import com.google.android.material.snackbar.Snackbar
 
@@ -20,7 +23,9 @@ class UpcomingEventFragment : Fragment() {
 
     private val binding get() = _binding!!
 
-    private val homeViewModel: HomeViewModel by viewModels()
+    private val homeViewModel: HomeViewModel by viewModels {
+        ViewModelFactory(Injection.provideRepository(requireContext()))
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -37,13 +42,18 @@ class UpcomingEventFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupObserver()
         setupRecyclerView()
+
+        // Set up SwipeRefreshLayout
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            homeViewModel.refreshEvents() // Trigger the refresh method in ViewModel
+        }
     }
 
     private fun setupObserver() {
         homeViewModel.activeEvents.observe(viewLifecycleOwner) {
             setEventsData(it, binding.rvEventActive)
         }
-        homeViewModel.isLoadingActiveEvent.observe(viewLifecycleOwner) {
+        homeViewModel.isLoading.observe(viewLifecycleOwner) {
             updateLoading(it, binding.pbActive)
         }
         homeViewModel.snackbarText.observe(viewLifecycleOwner) {
@@ -54,13 +64,13 @@ class UpcomingEventFragment : Fragment() {
     }
 
     private fun setEventsData(
-        events: List<EventItem>?,
+        events: List<Event>?,
         recyclerView: androidx.recyclerview.widget.RecyclerView,
     ) {
         val adapter = EventAdapter(onItemClick = { event ->
             navigateToDetailScreen(event)
         }, useLayoutA = false)
-        adapter.submitList(events)
+        adapter.submitList(events?.map { it.eventItem })
         recyclerView.adapter = adapter
     }
 
@@ -75,6 +85,7 @@ class UpcomingEventFragment : Fragment() {
 
     private fun updateLoading(isLoading: Boolean, progressBar: android.widget.ProgressBar) {
         progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.swipeRefreshLayout.isRefreshing = isLoading // Update SwipeRefreshLayout
     }
 
     private fun setupRecyclerView() {
