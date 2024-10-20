@@ -89,5 +89,5 @@ The *Dicoding Event App* is a mobile application designed to help users discover
 
 If you want to try the **DicodingEvent** app, simply download the latest release from the [Releases Page](https://github.com/Avwaveaf/DicodingEvent/releases/tag/v1.0). 
 
-After downloading the APK, install it on your Android device, and you're ready to explore the latest news!
+After downloading the APK, install it on your Android device, and you're ready to explore the latest Events at Dicoding!
 
